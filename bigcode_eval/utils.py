@@ -249,12 +249,16 @@ def complete_code(
     code_gens: List[List[Optional[str]]] = [[] for _ in range(n_tasks)]
     generations = [] if not intermediate_generations else intermediate_generations
     gen_token_dict = defaultdict(list)  # dict of list of generated tokens
+
+    # warmup = 15
+    seq_lens = list()
     for step, batch in tqdm(
         enumerate(dataloader),
         total=math.ceil(
             n_tasks * dataloader.dataset.n_copies / accelerator.num_processes
         ),
     ):
+        # profile_cond = step>=warmup and step<warmup+5
         with torch.no_grad():
             if task.stop_words:
                 # Set the start_length after which to check for stopping to be the longest input ignoring padding
@@ -297,11 +301,15 @@ def complete_code(
                         **gen_kwargs,
                     )
                 else:
-                    generated_tokens = model.generate(
+                    generated_tokens, seq_len, _, _ = model.generate(
                         input_ids=inputs,
                         num_return_sequences=batch_size,
                         **gen_kwargs,
                     )
+                    # if profile_cond:
+                    seq_lens.append(seq_len)
+                        # if step == warmup+4:
+                        #     break
             # each task is generated batch_size times
             generated_tasks = batch["task_id"].repeat(batch_size)
             generated_tokens = accelerator.pad_across_processes(
@@ -353,7 +361,7 @@ def complete_code(
     )
 
     generations.extend(code_gens)
-    return generations
+    return generations, seq_lens
 
 
 def update_code_gens(

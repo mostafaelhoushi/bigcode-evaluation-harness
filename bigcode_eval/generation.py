@@ -9,7 +9,7 @@ from transformers import StoppingCriteria, StoppingCriteriaList
 
 from bigcode_eval.utils import TokenizedDataset, complete_code
 
-
+import os
 class EndOfFunctionCriteria(StoppingCriteria):
     """Custom `StoppingCriteria` which checks if all generated functions in the batch are completed."""
     def __init__(self, start_length, eof_strings, tokenizer, check_fn=None):
@@ -51,6 +51,7 @@ def parallel_generations(
         save_every_k_tasks: int = -1,
         intermediate_generations: Optional[List[Optional[List[Optional[str]]]]] = None,
         intermediate_save_generations_path: Optional[str] = None,
+        task_name = None
 ):
     if args.load_generations_path:
         # load generated code
@@ -138,7 +139,7 @@ def parallel_generations(
         # model.to() is not supported for 8bit and 4bit models
         model, ds_loader = accelerator.prepare(model, ds_loader)
 
-    generations = complete_code(
+    generations, seq_lens = complete_code(
         task,
         accelerator,
         model,
@@ -156,4 +157,12 @@ def parallel_generations(
         intermediate_save_generations_path=intermediate_save_generations_path,
         **gen_kwargs,
     )
+    print("seq_lens: ", seq_lens)
+    dump_dir = "/fsx-atom/yejinlee/paper_submission_results/sequence_lengths/codellama/"+task_name
+    os.makedirs(dump_dir, exist_ok=True)
+    with open(dump_dir+"/seq_lengths.txt", "w") as f:
+        for sl in seq_lens:
+            f.write("\t".join([str(s) for s in sl])+"\n")
+        print("Written to : "+dump_dir+"/seq_lengths.txt")
+
     return generations
