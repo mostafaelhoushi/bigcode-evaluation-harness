@@ -157,12 +157,5 @@ def parallel_generations(
         intermediate_save_generations_path=intermediate_save_generations_path,
         **gen_kwargs,
     )
-    print("seq_lens: ", seq_lens)
-    dump_dir = "/fsx-atom/yejinlee/paper_submission_results/sequence_lengths/codellama/"+task_name
-    os.makedirs(dump_dir, exist_ok=True)
-    with open(dump_dir+"/seq_lengths.txt", "w") as f:
-        for sl in seq_lens:
-            f.write("\t".join([str(s) for s in sl])+"\n")
-        print("Written to : "+dump_dir+"/seq_lengths.txt")
 
     return generations
