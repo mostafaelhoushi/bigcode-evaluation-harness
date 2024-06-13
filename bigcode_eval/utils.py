@@ -255,17 +255,13 @@ def complete_code(
     gen_token_dict = defaultdict(list)  # dict of list of generated tokens
 
     warmup=15
-    seq_lens = list()
-    gpu_utils = list()
     timer_results = dict()
-    memory_capas = list()
     for step, batch in tqdm(
         enumerate(dataloader),
         total=math.ceil(
             n_tasks * dataloader.dataset.n_copies / accelerator.num_processes
         ),
     ):
-        profile_cond = step>=warmup and step<warmup+5
         with torch.no_grad():
             if task.stop_words:
                 # Set the start_length after which to check for stopping to be the longest input ignoring padding
@@ -308,7 +304,7 @@ def complete_code(
                         **gen_kwargs,
                     )
                 else:
-                    generated_tokens, seq_len, gpu_util, timer_result = model.generate(
+                    generated_tokens, timer_result = model.generate(
                         input_ids=inputs,
                         num_return_sequences=batch_size,
                         **gen_kwargs,
@@ -356,42 +352,21 @@ def complete_code(
                 # reset gen_token_dict - prevent redundant decoding
                 gen_token_dict = defaultdict(list)
 
-        if profile_cond:
-            seq_lens.append(seq_len)
-            gpu_utils.append(gpu_util)
-            memory_capas.append(torch.cuda.max_memory_allocated(torch.cuda.current_device()))
-            if len(timer_results)==0:
-                for k, v in timer_result.items():
-                    timer_results[k] = [v]
-            else:
-                for k in timer_results.keys():
-                    timer_results[k].append(timer_result[k])
+        if len(timer_results)==0:
+            for k, v in timer_result.items():
+                timer_results[k] = [v]
+        else:
+            for k in timer_results.keys():
+                timer_results[k].append(timer_result[k])
 
-            if step == warmup+4:
-                break
 
-    dump_dir = "/fsx-atom/yejinlee/sweep_final/1gpu_1node/"+task.__class__.__name__+"_codellama/batch_size_"+str(batch_size)
+    dump_dir = "/fsx-atom/yejinlee/paper_submission_results/latency_distribution/1gpu_1node/"+task.__class__.__name__+"_codellama/batch_size_"+str(batch_size)
     os.makedirs(dump_dir, exist_ok=True)
-    print("Avg Input Seq Len: ", np.average([float(sl[0]) for sl in seq_lens]))
-    print("Avg Output Seq Len: ", np.average([float(sl[1]) for sl in seq_lens]))
-    print("Avg Decoding Step: ", np.average([float(sl[2]) for sl in seq_lens]))
-    with open(dump_dir+"/seq_lengths.txt", "w") as f:
-        for sl in seq_lens:
-            f.write("\t".join([str(s) for s in sl])+"\n")
-        print("Written to : ", dump_dir+"/seq_lengths.txt")
 
     with open(dump_dir+"/timer_result.txt", "w") as f:
         f.write("\t".join(list(timer_results.keys()))+"\n")
         f.write("\t".join([str(np.average(v)) for k, v in timer_results.items()]))
     print("Written to : ", dump_dir+"/timer_result.txt")
-
-    with open(dump_dir+"/memory_alloc.txt", "w") as f:
-        f.write("\n".join([str(g) for g in memory_capas]))
-        print("Written to : ", dump_dir+"/memory_alloc.txt")
-
-    with open(dump_dir+"/gpu_util.txt", "w") as f:
-        f.write("\n".join([str(g) for g in gpu_utils]))
-        print("Written to : ", dump_dir+"/gpu_util.txt")
             
     exit(0)
 
