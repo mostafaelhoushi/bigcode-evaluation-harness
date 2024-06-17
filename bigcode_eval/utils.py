@@ -255,7 +255,7 @@ def complete_code(
     gen_token_dict = defaultdict(list)  # dict of list of generated tokens
 
     warmup=15
-    timer_results = dict()
+    timer_results = list()
     for step, batch in tqdm(
         enumerate(dataloader),
         total=math.ceil(
@@ -304,6 +304,7 @@ def complete_code(
                         **gen_kwargs,
                     )
                 else:
+                    # model.forward = torch.compile(model.forward, mode='max-autotune', fullgraph=True)
                     generated_tokens, timer_result = model.generate(
                         input_ids=inputs,
                         num_return_sequences=batch_size,
@@ -352,22 +353,18 @@ def complete_code(
                 # reset gen_token_dict - prevent redundant decoding
                 gen_token_dict = defaultdict(list)
 
-        if len(timer_results)==0:
-            for k, v in timer_result.items():
-                timer_results[k] = [v]
-        else:
-            for k in timer_results.keys():
-                timer_results[k].append(timer_result[k])
-
+        timer_results.append(timer_result)
 
     dump_dir = "/fsx-atom/yejinlee/paper_submission_results/latency_distribution/1gpu_1node/"+task.__class__.__name__+"_codellama/batch_size_"+str(batch_size)
     os.makedirs(dump_dir, exist_ok=True)
-
     with open(dump_dir+"/timer_result.txt", "w") as f:
-        f.write("\t".join(list(timer_results.keys()))+"\n")
-        f.write("\t".join([str(np.average(v)) for k, v in timer_results.items()]))
+        f.write("\t".join(list(timer_results[0].keys()))+"\n")
+        write_str=""
+        for tr in  timer_results:
+            write_str += "\t".join([str(t) for t in list(tr.values())]) + "\n"
+        f.write(write_str)
     print("Written to : ", dump_dir+"/timer_result.txt")
-            
+
     exit(0)
 
     code_gens = update_code_gens(
