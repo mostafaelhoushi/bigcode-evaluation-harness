@@ -297,6 +297,8 @@ def main():
                 args.model,
                 **model_kwargs,
             )
+            print("COMPILE")
+            model.forward = torch.compile(model.forward, mode='max-autotune', fullgraph=True)
         elif args.modeltype == "seq2seq":
             warnings.warn(
                 "Seq2Seq models have only been tested for HumanEvalPack & CodeT5+ models."
