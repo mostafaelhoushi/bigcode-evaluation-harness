@@ -257,43 +257,47 @@ def complete_code(
 
     timer_results = list()
 
-    # import torchao
 
-    # from torch import nn
-    # def layers_to_quantize(layer, x):
-    #     if isinstance(layer, nn.Linear):
-    #         return True
-    #     return False
-    
-    # model = torchao.autoquant(model, manual=True, filter_fn=layers_to_quantize)
-    # # model = torchao.autoquant(model, manual=True)
+    quant = os.environ.get('AUTOQUANT', False)
+    if quant:
+        import torchao
+        from torch import nn
+        def layers_to_quantize(layer, x):
+            if isinstance(layer, nn.Linear):
+                return True
+            return False
+        
+        model.model = torchao.autoquant(model.model, manual=True, filter_fn=layers_to_quantize)
+        # model = torchao.autoquant(model, manual=True)
 
-    # print("Autoquant shape calibration start") 
+        print("Autoquant shape calibration start") 
 
-    # warmup_input = torch.tensor([[    1,   515, 19229,  1053,  2391,    13,    13,    13,  1753,   756,
-    #         29918,  5358, 29918, 17664, 29898, 20326, 29901,  2391, 29961,  7411,
-    #         1402, 16897, 29901,  5785, 29897,  1599,  6120, 29901,    13,  1678,
-    #         9995,  5399,   565,   297,  2183,  1051,   310,  3694, 29892,   526,
-    #         738,  1023,  3694, 17649,   304,  1269,   916,  1135,    13,  1678,
-    #         2183, 16897, 29889,    13,  1678,  8653,   756, 29918,  5358, 29918,
-    #         17664,  4197, 29896, 29889, 29900, 29892, 29871, 29906, 29889, 29900,
-    #         29892, 29871, 29941, 29889, 29900,  1402, 29871, 29900, 29889, 29945,
-    #         29897,    13,  1678,  7700,    13,  1678,  8653,   756, 29918,  5358,
-    #         29918, 17664,  4197, 29896, 29889, 29900, 29892, 29871, 29906, 29889,
-    #         29947, 29892, 29871, 29941, 29889, 29900, 29892, 29871, 29946, 29889,
-    #         29900, 29892, 29871, 29945, 29889, 29900, 29892, 29871, 29906, 29889,
-    #         29900,  1402, 29871, 29900, 29889, 29941, 29897,    13,  1678,  5852,
-    #             13,  1678,  9995]]).cuda()
-    
-    # model.generate(
-    #     input_ids=warmup_input,
-    #     num_return_sequences=batch_size,
-    #     **gen_kwargs,
-    # )
+        warmup_input = torch.tensor([[    1,   515, 19229,  1053,  2391,    13,    13,    13,  1753,   756,
+                29918,  5358, 29918, 17664, 29898, 20326, 29901,  2391, 29961,  7411,
+                1402, 16897, 29901,  5785, 29897,  1599,  6120, 29901,    13,  1678,
+                9995,  5399,   565,   297,  2183,  1051,   310,  3694, 29892,   526,
+                738,  1023,  3694, 17649,   304,  1269,   916,  1135,    13,  1678,
+                2183, 16897, 29889,    13,  1678,  8653,   756, 29918,  5358, 29918,
+                17664,  4197, 29896, 29889, 29900, 29892, 29871, 29906, 29889, 29900,
+                29892, 29871, 29941, 29889, 29900,  1402, 29871, 29900, 29889, 29945,
+                29897,    13,  1678,  7700,    13,  1678,  8653,   756, 29918,  5358,
+                29918, 17664,  4197, 29896, 29889, 29900, 29892, 29871, 29906, 29889,
+                29947, 29892, 29871, 29941, 29889, 29900, 29892, 29871, 29946, 29889,
+                29900, 29892, 29871, 29945, 29889, 29900, 29892, 29871, 29906, 29889,
+                29900,  1402, 29871, 29900, 29889, 29941, 29897,    13,  1678,  5852,
+                    13,  1678,  9995]], device='cuda:0')
+        # gen_kwargs = {'do_sample': True, 'temperature': 0.2, 'top_p': 0.95, 'top_k': 0, 'max_length': 10000}
+        gen_kwargs["stopping_criteria"][0].start_length = 133
+        model.generate(
+            input_ids=warmup_input,
+            num_return_sequences=batch_size,
+            **gen_kwargs,
+        )
+        print("Autoquant benchmarking Start") 
+        # do autoquantization
+        model.do_autoquant()
 
-    # print("Autoquant benchmarking Start") 
-    # # do autoquantization
-    # model.do_autoquant()
+
 
     # torch._dynamo.config.cache_size_limit = 64
     compile = os.environ.get('TORCH_COMPILE', False)
