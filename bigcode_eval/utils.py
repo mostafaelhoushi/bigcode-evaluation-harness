@@ -241,6 +241,7 @@ def complete_code(
     save_every_k_tasks: int = -1,
     intermediate_generations: Optional[List[Optional[List[Optional[str]]]]] = None,
     intermediate_save_generations_path: Optional[str] = None,
+    model_name=None,
     **gen_kwargs,
 ):
     """Generate multiple codes for each task in the dataset using multiple GPUs with accelerate.
@@ -256,36 +257,85 @@ def complete_code(
 
     timer_results = list()
 
-    # Warmup
-    print("Starting Warmup")
-    warmup_input = torch.tensor([[    1,   515, 19229,  1053,  2391,    13,    13,    13,  1753,   756,
-            29918,  5358, 29918, 17664, 29898, 20326, 29901,  2391, 29961,  7411,
-            1402, 16897, 29901,  5785, 29897,  1599,  6120, 29901,    13,  1678,
-            9995,  5399,   565,   297,  2183,  1051,   310,  3694, 29892,   526,
-            738,  1023,  3694, 17649,   304,  1269,   916,  1135,    13,  1678,
-            2183, 16897, 29889,    13,  1678,  8653,   756, 29918,  5358, 29918,
-            17664,  4197, 29896, 29889, 29900, 29892, 29871, 29906, 29889, 29900,
-            29892, 29871, 29941, 29889, 29900,  1402, 29871, 29900, 29889, 29945,
-            29897,    13,  1678,  7700,    13,  1678,  8653,   756, 29918,  5358,
-            29918, 17664,  4197, 29896, 29889, 29900, 29892, 29871, 29906, 29889,
-            29947, 29892, 29871, 29941, 29889, 29900, 29892, 29871, 29946, 29889,
-            29900, 29892, 29871, 29945, 29889, 29900, 29892, 29871, 29906, 29889,
-            29900,  1402, 29871, 29900, 29889, 29941, 29897,    13,  1678,  5852,
-                13,  1678,  9995]]).cuda()
+    # import torchao
+
+    # from torch import nn
+    # def layers_to_quantize(layer, x):
+    #     if isinstance(layer, nn.Linear):
+    #         return True
+    #     return False
     
-    for i in range(15):
-        torch.cuda.synchronize()
-        start_time = time.time()
-        _, _ = model.generate(
-            input_ids=warmup_input,
-            num_return_sequences=batch_size,
-            **gen_kwargs,
-        )
-        torch.cuda.synchronize()
-        print((time.time()-start_time)*1000)
-    print("Ending Warmup")
-    # Warmup
-    exit(0)
+    # model = torchao.autoquant(model, manual=True, filter_fn=layers_to_quantize)
+    # # model = torchao.autoquant(model, manual=True)
+
+    # print("Autoquant shape calibration start") 
+
+    # warmup_input = torch.tensor([[    1,   515, 19229,  1053,  2391,    13,    13,    13,  1753,   756,
+    #         29918,  5358, 29918, 17664, 29898, 20326, 29901,  2391, 29961,  7411,
+    #         1402, 16897, 29901,  5785, 29897,  1599,  6120, 29901,    13,  1678,
+    #         9995,  5399,   565,   297,  2183,  1051,   310,  3694, 29892,   526,
+    #         738,  1023,  3694, 17649,   304,  1269,   916,  1135,    13,  1678,
+    #         2183, 16897, 29889,    13,  1678,  8653,   756, 29918,  5358, 29918,
+    #         17664,  4197, 29896, 29889, 29900, 29892, 29871, 29906, 29889, 29900,
+    #         29892, 29871, 29941, 29889, 29900,  1402, 29871, 29900, 29889, 29945,
+    #         29897,    13,  1678,  7700,    13,  1678,  8653,   756, 29918,  5358,
+    #         29918, 17664,  4197, 29896, 29889, 29900, 29892, 29871, 29906, 29889,
+    #         29947, 29892, 29871, 29941, 29889, 29900, 29892, 29871, 29946, 29889,
+    #         29900, 29892, 29871, 29945, 29889, 29900, 29892, 29871, 29906, 29889,
+    #         29900,  1402, 29871, 29900, 29889, 29941, 29897,    13,  1678,  5852,
+    #             13,  1678,  9995]]).cuda()
+    
+    # model.generate(
+    #     input_ids=warmup_input,
+    #     num_return_sequences=batch_size,
+    #     **gen_kwargs,
+    # )
+
+    # print("Autoquant benchmarking Start") 
+    # # do autoquantization
+    # model.do_autoquant()
+
+    # torch._dynamo.config.cache_size_limit = 64
+    compile = os.environ.get('TORCH_COMPILE', False)
+    if compile:
+        print("Torch.compile Start")
+        # model = torch.compile(model, mode='max-autotune', fullgraph=True) # -> It's not fast
+        # model.forward = torch.compile(model.forward, mode='max-autotune', fullgraph=True) # -> It's not fast
+        model.model = torch.compile(model.model, mode='max-autotune')#, fullgraph=True)
+
+    # # # Warmup
+    # # print("Starting Warmup")    
+    # warmup_input = torch.tensor([[    1,   515, 19229,  1053,  2391,    13,    13,    13,  1753,   756,
+    #         29918,  5358, 29918, 17664, 29898, 20326, 29901,  2391, 29961,  7411,
+    #         1402, 16897, 29901,  5785, 29897,  1599,  6120, 29901,    13,  1678,
+    #         9995,  5399,   565,   297,  2183,  1051,   310,  3694, 29892,   526,
+    #         738,  1023,  3694, 17649,   304,  1269,   916,  1135,    13,  1678,
+    #         2183, 16897, 29889,    13,  1678,  8653,   756, 29918,  5358, 29918,
+    #         17664,  4197, 29896, 29889, 29900, 29892, 29871, 29906, 29889, 29900,
+    #         29892, 29871, 29941, 29889, 29900,  1402, 29871, 29900, 29889, 29945,
+    #         29897,    13,  1678,  7700,    13,  1678,  8653,   756, 29918,  5358,
+    #         29918, 17664,  4197, 29896, 29889, 29900, 29892, 29871, 29906, 29889,
+    #         29947, 29892, 29871, 29941, 29889, 29900, 29892, 29871, 29946, 29889,
+    #         29900, 29892, 29871, 29945, 29889, 29900, 29892, 29871, 29906, 29889,
+    #         29900,  1402, 29871, 29900, 29889, 29941, 29897,    13,  1678,  5852,
+    #             13,  1678,  9995]], device='cuda:0')
+    # # gen_kwargs = {'do_sample': True, 'temperature': 0.2, 'top_p': 0.95, 'top_k': 0, 'max_length': 10000}
+    # gen_kwargs["stopping_criteria"][0].start_length = 133
+
+    # for i in range(15):
+    #     _, runtime = model.generate(
+    #         input_ids=warmup_input,
+    #         num_return_sequences=batch_size,
+    #         **gen_kwargs,
+    #     )
+    #     print(runtime)
+
+    # print("Ending Warmup")
+    # # Warmup
+    # exit(0)
+    # 430 for humaneval, 1748 for mbpp
+
+
     for step, batch in tqdm(
         enumerate(dataloader),
         total=math.ceil(
@@ -346,7 +396,6 @@ def complete_code(
                     #     num_return_sequences=batch_size,
                     #     **gen_kwargs,
                     # )
-
                     generated_tokens, timer_result = model.generate(
                         input_ids=inputs,
                         num_return_sequences=batch_size,
@@ -394,22 +443,23 @@ def complete_code(
                 #     )
                 # reset gen_token_dict - prevent redundant decoding
                 gen_token_dict = defaultdict(list)
+        if timer_result["Total"] != -1:
+            timer_results.append(timer_result)
+            print(timer_result)
+        else:
+            print("Skipping this example")
 
-        timer_results.append(timer_result)
-        print(timer_result)
-        if len(timer_results) == 5:
-            break
-    # dump_dir = "/fsx-atom/yejinlee/paper_submission_results/latency_distribution/1gpu_1node/"+task.__class__.__name__+"_codellama/batch_size_"+str(batch_size)
-    # os.makedirs(dump_dir, exist_ok=True)
-    # with open(dump_dir+"/timer_result.txt", "w") as f:
-    #     f.write("\t".join(list(timer_results[0].keys()))+"\n")
-    #     write_str=""
-    #     for tr in  timer_results:
-    #         write_str += "\t".join([str(t) for t in list(tr.values())]) + "\n"
-    #     f.write(write_str)
-    # print("Written to : ", dump_dir+"/timer_result.txt")
+    dump_dir = "/fsx-atom/yejinlee/paper_submission_results/torch_compile/1gpu_1node/"+task.__class__.__name__+"_codellama/"+str(model_name)+"/batch_size_"+str(batch_size)
+    os.makedirs(dump_dir, exist_ok=True)
+    with open(dump_dir+"/timer_result.txt", "w") as f:
+        f.write("\t".join(list(timer_results[0].keys()))+"\n")
+        write_str=""
+        for tr in  timer_results:
+            write_str += "\t".join([str(t) for t in list(tr.values())]) + "\n"
+        f.write(write_str)
+    print("Written to : ", dump_dir+"/timer_result.txt")
 
-    # exit(0)
+    exit(0)
 
     code_gens = update_code_gens(
         task,
@@ -423,7 +473,6 @@ def complete_code(
     )
 
     generations.extend(code_gens)
-    print("Generations: ", generations)
     return generations
 
 

@@ -40,7 +40,7 @@ class Evaluator:
         # code evaluation permission
         self.allow_code_execution = args.allow_code_execution
 
-    def generate_text(self, task_name, intermediate_generations=None):
+    def generate_text(self, task_name, intermediate_generations=None, model_name=None):
         task = tasks.get_task(task_name, self.args)
         dataset = task.get_dataset()
         # if args.limit is None, use all samples
@@ -78,7 +78,8 @@ class Evaluator:
             save_every_k_tasks=self.args.save_every_k_tasks,
             intermediate_generations=curr_generations,
             intermediate_save_generations_path=intermediate_save_generations_path,
-            task_name=task_name
+            task_name=task_name,
+            model_name=model_name
         )
 
         if len(generations[0]) > self.args.n_samples:
@@ -88,12 +89,12 @@ class Evaluator:
             )
         return generations, references
 
-    def evaluate(self, task_name, intermediate_generations=None):
+    def evaluate(self, task_name, intermediate_generations=None, model_name=None):
         task = tasks.get_task(task_name, self.args)
         if task.requires_execution and not self.allow_code_execution:
             raise ValueError(_WARNING)
 
-        generations, references = self.generate_text(task_name, intermediate_generations=intermediate_generations)
+        generations, references = self.generate_text(task_name, intermediate_generations=intermediate_generations, model_name=model_name)
 
         if self.accelerator.is_main_process:
             if not self.args.load_generations_path:

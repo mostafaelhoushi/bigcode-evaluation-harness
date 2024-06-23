@@ -51,7 +51,8 @@ def parallel_generations(
         save_every_k_tasks: int = -1,
         intermediate_generations: Optional[List[Optional[List[Optional[str]]]]] = None,
         intermediate_save_generations_path: Optional[str] = None,
-        task_name = None
+        task_name = None,
+        model_name = None
 ):
     if args.load_generations_path:
         # load generated code
@@ -156,6 +157,7 @@ def parallel_generations(
         save_every_k_tasks=save_every_k_tasks,
         intermediate_generations=intermediate_generations,
         intermediate_save_generations_path=intermediate_save_generations_path,
+        model_name=model_name,
         **gen_kwargs,
     )
 

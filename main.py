@@ -297,8 +297,9 @@ def main():
                 args.model,
                 **model_kwargs,
             )
-            print("COMPILE")
-            model.forward = torch.compile(model.forward, mode='max-autotune', fullgraph=True)
+            # print("COMPILE")
+            # model.forward = torch.compile(model.forward, mode='max-autotune', fullgraph=True)
+
         elif args.modeltype == "seq2seq":
             warnings.warn(
                 "Seq2Seq models have only been tested for HumanEvalPack & CodeT5+ models."
@@ -398,7 +399,7 @@ def main():
                     )
             else:
                 results[task] = evaluator.evaluate(
-                    task, intermediate_generations=intermediate_generations
+                    task, intermediate_generations=intermediate_generations, model_name=args.model
                 )
 
     # Save all args to config
