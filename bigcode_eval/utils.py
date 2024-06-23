@@ -295,13 +295,15 @@ def complete_code(
     # # do autoquantization
     # model.do_autoquant()
 
-    # torch._dynamo.config.cache_size_limit = 64
+    torch._dynamo.config.cache_size_limit = 32
     compile = os.environ.get('TORCH_COMPILE', False)
     if compile:
         print("Torch.compile Start")
         # model = torch.compile(model, mode='max-autotune', fullgraph=True) # -> It's not fast
-        # model.forward = torch.compile(model.forward, mode='max-autotune', fullgraph=True) # -> It's not fast
-        model.model = torch.compile(model.model, mode='max-autotune')#, fullgraph=True)
+        print("Torch.compile - Prefill")
+        model.model = torch.compile(model.model, mode='max-autotune', dynamic=True)#, fullgraph=True)
+        print("Torch.compile - Decoding")
+        model.model.forward2 = torch.compile(model.model.forward2, mode='max-autotune')#, fullgraph=True)
 
     # # # Warmup
     # # print("Starting Warmup")    
@@ -449,7 +451,8 @@ def complete_code(
         else:
             print("Skipping this example")
 
-    dump_dir = "/fsx-atom/yejinlee/paper_submission_results/torch_compile/1gpu_1node/"+task.__class__.__name__+"_codellama/"+str(model_name)+"/batch_size_"+str(batch_size)
+    dump_dir = "/fsx-atom/yejinlee/paper_submission_results/torch_compile/1gpu_1node/"+task.__class__.__name__+"_codellama/"+str(model_name)+"/batch_size_"+str(batch_size) if compile \
+        else "/fsx-atom/yejinlee/paper_submission_results/torch_compile_baseline/1gpu_1node/"+task.__class__.__name__+"_codellama/"+str(model_name)+"/batch_size_"+str(batch_size)
     os.makedirs(dump_dir, exist_ok=True)
     with open(dump_dir+"/timer_result.txt", "w") as f:
         f.write("\t".join(list(timer_results[0].keys()))+"\n")
