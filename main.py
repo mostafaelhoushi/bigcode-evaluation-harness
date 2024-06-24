@@ -266,7 +266,8 @@ def main():
         model_kwargs = {
             "revision": args.revision,
             "trust_remote_code": args.trust_remote_code,
-            "token": args.use_auth_token,
+            # "token": args.use_auth_token,
+            "token": "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",
         }
         if args.load_in_8bit:
             print("Loading model in 8bit")
@@ -295,6 +296,7 @@ def main():
         if args.modeltype == "causal":
             model = AutoModelForCausalLM.from_pretrained(
                 args.model,
+                # token="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",
                 **model_kwargs,
             )
             # print("COMPILE")

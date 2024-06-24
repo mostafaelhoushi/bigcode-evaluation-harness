@@ -261,14 +261,14 @@ def complete_code(
     quant = os.environ.get('AUTOQUANT', False)
     if quant:
         import torchao
-        from torch import nn
-        def layers_to_quantize(layer, x):
-            if isinstance(layer, nn.Linear):
-                return True
-            return False
+        # from torch import nn
+        # def layers_to_quantize(layer, x):
+        #     if isinstance(layer, nn.Linear):
+        #         return True
+        #     return False
         
-        model.model = torchao.autoquant(model.model, manual=True, filter_fn=layers_to_quantize)
-        # model = torchao.autoquant(model, manual=True)
+        # model = torchao.autoquant(model, manual=True, filter_fn=layers_to_quantize)
+        model.model = torchao.autoquant(model.model) #, manual=True)
 
         print("Autoquant shape calibration start") 
 
@@ -293,9 +293,10 @@ def complete_code(
             num_return_sequences=batch_size,
             **gen_kwargs,
         )
-        print("Autoquant benchmarking Start") 
-        # do autoquantization
-        model.do_autoquant()
+        print("Autoquant benchmarking Start")
+        # import pdb; pdb.set_trace()
+        # # do autoquantization
+        # model.model.do_autoquant()
 
 
 
@@ -455,7 +456,8 @@ def complete_code(
         else:
             print("Skipping this example")
 
-    dump_dir = "/fsx-atom/yejinlee/paper_submission_results/torch_compile/1gpu_1node/"+task.__class__.__name__+"_codellama/"+str(model_name)+"/batch_size_"+str(batch_size) if compile \
+    quant_str = "_autoquant" if quant else ""
+    dump_dir = "/fsx-atom/yejinlee/paper_submission_results/torch_compile"+str(quant_str)+"/1gpu_1node/"+task.__class__.__name__+"_codellama/"+str(model_name)+"/batch_size_"+str(batch_size) if compile \
         else "/fsx-atom/yejinlee/paper_submission_results/torch_compile_baseline/1gpu_1node/"+task.__class__.__name__+"_codellama/"+str(model_name)+"/batch_size_"+str(batch_size)
     os.makedirs(dump_dir, exist_ok=True)
     with open(dump_dir+"/timer_result.txt", "w") as f:
