@@ -51,6 +51,7 @@ def parallel_generations(
         save_every_k_tasks: int = -1,
         intermediate_generations: Optional[List[Optional[List[Optional[str]]]]] = None,
         intermediate_save_generations_path: Optional[str] = None,
+        assistant_model = None,
 ):
     if args.load_generations_path:
         # load generated code
@@ -72,6 +73,8 @@ def parallel_generations(
         "top_k": args.top_k,
         "max_length": args.max_length_generation,
     }
+    if assistant_model:
+        gen_kwargs["assistant_model"] = assistant_model
     stopping_criteria = []
     # The input_length / start_length set to 0 for now will be adjusted later
     # Check if the task has a custom check_fn method for the stopping criteria

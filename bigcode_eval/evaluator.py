@@ -28,11 +28,12 @@ Once you have read this disclaimer and taken appropriate precautions, set the ar
 """
 
 class Evaluator:
-    def __init__(self, accelerator, model, tokenizer, args):
+    def __init__(self, accelerator, model, tokenizer, args, assistant_model=None):
         self.accelerator = accelerator
         self.model = model
         self.tokenizer = tokenizer
         self.args = args
+        self.assistant_model = assistant_model
 
         # setup arguments
         self.metric_output_path = args.metric_output_path
@@ -78,6 +79,7 @@ class Evaluator:
             save_every_k_tasks=self.args.save_every_k_tasks,
             intermediate_generations=curr_generations,
             intermediate_save_generations_path=intermediate_save_generations_path,
+            assistant_model=self.assistant_model,
         )
 
         if len(generations[0]) > self.args.n_samples:

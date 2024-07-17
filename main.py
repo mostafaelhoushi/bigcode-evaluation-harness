@@ -1,3 +1,4 @@
+import copy
 import os
 import fnmatch
 import json
@@ -54,6 +55,17 @@ def parse_args():
         type=str,
         default=None,
         help="Adapter to the PEFT base model. Can be utilized for loading PEFT adapters such as a LoRA trained model. The --model parameter needs to be the base model.",
+    )
+    parser.add_argument(
+        "--draft_model",
+        default=None,
+        help="Draft model to add as an assistant model, provide a repo name in Hugging Face hub or a local path",
+    )
+    parser.add_argument(
+        "--draft_early_exit",
+        type=int,
+        default=None,
+        help="To enable self-speculative decoding, the layer to exit at for draft model",
     )
     parser.add_argument(
         "--revision",
@@ -318,6 +330,33 @@ def main():
             model.merge_and_unload()
             print("Merge complete.")
 
+        if args.draft_model:
+            assistant_model_kwargs = copy.deepcopy(model_kwargs)
+            assistant_model_kwargs["device_map"] = "cpu"
+            if args.modeltype == "causal":
+                assistant_model = AutoModelForCausalLM.from_pretrained(
+                    args.draft_model,
+                    **assistant_model_kwargs,
+                )
+            elif args.modeltype == "seq2seq":
+                warnings.warn(
+                    "Seq2Seq models have only been tested for HumanEvalPack & CodeT5+ models."
+                )
+                assistant_model = AutoModelForSeq2SeqLM.from_pretrained(
+                    args.draft_model,
+                    **assistant_model_kwargs,
+                )
+            else:
+                raise ValueError(
+                    f"Non valid modeltype {args.modeltype}, choose from: causal, seq2seq"
+                )
+            if args.draft_early_exit:
+                assistant_model.model.layers = assistant_model.model.layers[:args.draft_early_exit]
+                del assistant_model.model.layers[args.draft_early_exit:]
+            assistant_model.to(model.device)
+        else:
+            assistant_model = None
+
         if args.left_padding:
             # left padding is required for some models like chatglm3-6b
             tokenizer = AutoTokenizer.from_pretrained(
@@ -360,7 +399,7 @@ def main():
             tokenizer.bos_token_id = 1
             print("Changing bos_token to <s>")
 
-        evaluator = Evaluator(accelerator, model, tokenizer, args)
+        evaluator = Evaluator(accelerator, model, tokenizer, args, assistant_model=assistant_model)
 
         if (
             args.load_generations_intermediate_paths
