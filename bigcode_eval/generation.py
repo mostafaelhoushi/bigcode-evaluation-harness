@@ -71,7 +71,7 @@ def parallel_generations(
         "temperature": args.temperature,
         "top_p": args.top_p,
         "top_k": args.top_k,
-        "max_length": args.max_length_generation,
+        "max_new_tokens": args.max_length_generation,
     }
     if assistant_model:
         gen_kwargs["assistant_model"] = assistant_model
