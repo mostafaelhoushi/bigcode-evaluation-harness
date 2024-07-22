@@ -457,8 +457,8 @@ def complete_code(
             print("Skipping this example")
 
     quant_str = "_autoquant" if quant else ""
-    dump_dir = "/fsx-atom/yejinlee/paper_submission_results/torch_compile"+str(quant_str)+"/1gpu_1node/"+task.__class__.__name__+"_codellama/"+str(model_name)+"/batch_size_"+str(batch_size) if compile \
-        else "/fsx-atom/yejinlee/paper_submission_results/torch_compile_baseline/1gpu_1node/"+task.__class__.__name__+"_codellama/"+str(model_name)+"/batch_size_"+str(batch_size)
+    dump_dir = "/fsx-atom/melhoushi/paper_submission_results/torch_compile"+str(quant_str)+"/1gpu_1node/"+task.__class__.__name__+"_codellama/"+str(model_name)+"/batch_size_"+str(batch_size) if compile \
+        else "/fsx-atom/melhoushi/paper_submission_results/torch_compile_baseline/1gpu_1node/"+task.__class__.__name__+"_codellama/"+str(model_name)+"/batch_size_"+str(batch_size)
     os.makedirs(dump_dir, exist_ok=True)
     with open(dump_dir+"/timer_result.txt", "w") as f:
         f.write("\t".join(list(timer_results[0].keys()))+"\n")
